@@ -1,6 +1,8 @@
 import sys
+import rosbag
+import rospy
 
-def merge_bags(folder, output_name):
+def merge_bags(output_name, folders):
     #Check all subdirectories of folder to find all rosbags
     
     #List all bags
@@ -15,8 +17,17 @@ def merge_bags(folder, output_name):
     return True
     
 
-print("Try to merge all rosbags in "+ sys.argv[1] +"...")
-if(merge_bags(sys.argv[1],sys.argv[2])):
-    print("Success: New Rosbag has successfully been generated as: "+ sys.argv[2])
+#Prepare input data
+output_name = sys.argv[1]
+input_folder = []
+
+for i in range (2,len(sys.argv)):
+    input_folder.append(sys.argv[i])
+    
+print("Try to merge all rosbags in the following folders...")
+print(input_folder)
+
+if(merge_bags(output_name, input_folder)):
+    print("Success: New Rosbag has successfully been generated as: "+ output_name)
 else:
     print("FAILED: New Rosbag could not be generated!")
