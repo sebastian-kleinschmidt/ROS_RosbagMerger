@@ -3,7 +3,12 @@ import rosbag
 import rospy
 import glob
 
+def sort_bags(properties):
+    return properties[1]
+
 def merge_bags(output_name, folders):
+    bag_properties = []
+    
     output_start_time = -1
     output_end_time = -1
     #Check all subdirectories of folder to find all rosbags
@@ -18,6 +23,7 @@ def merge_bags(output_name, folders):
                 if(bag.get_end_time() > output_end_time or output_end_time==-1):
                     output_end_time = bag.get_end_time()
                 #Save name, start, end and duration of current bag
+                bag_properties.append((file, bag.get_start_time(), bag.get_end_time()))
                 #print(file)
                 #print("Start Time:")
                 #print(bag.get_start_time())
@@ -28,11 +34,18 @@ def merge_bags(output_name, folders):
                 #print(rospy.Time(bag.get_end_time())-rospy.Time(bag.get_start_time()))
     
     #Sort all bags by starttime
+    bag_properties.sort(key=sort_bags)
     
     #Output some useful parameters on the measurement series
     duration = output_end_time-output_start_time
     print("Generating new bag in time interval from " + str(output_start_time) + " to " + str(output_end_time))
     print("the duration will be: " + str(duration) + " seconds")
+    
+    with rosbag.Bag(output_name, 'w') as outbag:
+        #Now process all rosbag in the right order and write the recorded messages into the new bag
+        for bag in bag_properties:
+            with rosbag.Bag(file, 'a') as bag:
+                print(bag[1])
     
     #Open rosbags with intersecting time intervals
     
