@@ -36,10 +36,17 @@ def merge_bags(output_name, folders):
     #Sort all bags by starttime
     bag_properties.sort(key=sort_bags)
     
+    #Identify overlapping bags
+    
     #Output some useful parameters on the measurement series
     duration = output_end_time-output_start_time
     print("Generating new bag in time interval from " + str(output_start_time) + " to " + str(output_end_time))
     print("the duration will be: " + str(duration) + " seconds")
+    
+    #Error detection
+    if(output_start_time=-1 or output_end_time=-1):
+        print("No rosbag found")
+        return False
     
     with rosbag.Bag(output_name, 'w') as outbag:
         #Now process all rosbag in the right order and write the recorded messages into the new bag
