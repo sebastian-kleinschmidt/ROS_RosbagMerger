@@ -9,6 +9,7 @@ def sort_bags(properties):
 def merge_bags(output_name, folders):
     bag_properties = []
     
+    split_interval_length = 180  #Max interval length in seconds
     allowed_interval_offset = 5 #Offset in seconds which is allowed between two bags
     
     output_start_time = -1
@@ -27,14 +28,6 @@ def merge_bags(output_name, folders):
                     output_end_time = bag.get_end_time()
                 #Save name, start, end and duration of current bag
                 bag_properties.append((file, bag.get_start_time(), bag.get_end_time()))
-                #print(file)
-                #print("Start Time:")
-                #print(bag.get_start_time())
-                #print(rospy.Time(bag.get_start_time()))
-                #print("End Time:")
-                #print(rospy.Time(bag.get_end_time()))
-                #print("Duration:")
-                #print(rospy.Time(bag.get_end_time())-rospy.Time(bag.get_start_time()))
     
     #Sort all bags by starttime
     bag_properties.sort(key=sort_bags)
@@ -42,34 +35,43 @@ def merge_bags(output_name, folders):
     bag_intervals = []
     bag_intervals.append([])
     #Identify overlapping bags
+    current_interval_start = bag_properties[0][1]
+    current_interval_end = bag_properties[0][2]
     for idx in range(1,len(bag_properties)):
-        if bag_properties[idx][1]<(bag_properties[idx-1][2]+allowed_interval_offset): #Check if bags have overlapping time interval
+        if bag_properties[idx][1]<(current_interval_end+allowed_interval_offset): #Check if bags have overlapping time interval
             bag_intervals[-1].append(bag_properties[idx])
+            if bag_properties[idx][2]>current_interval_end:
+                current_interval_end = bag_properties[idx][2]
+                #Check if interval needs to be split
+                if (current_interval_end-current_interval_start)>split_interval_length:
+                    current_interval_start = current_interval_end
+                    bag_intervals.append([])
         else:
             bag_intervals.append([])                        #Create new interval
     
     #Output resulting numver of intervals
     print(str(len(bag_intervals)) +" intervals have been found in folders.")
     
-    #Output some useful parameters on the measurement series
-    duration = output_end_time-output_start_time
-    print("Generating new bag in time interval from " + str(output_start_time) + " to " + str(output_end_time))
-    print("the duration will be: " + str(duration) + " seconds")
-    
     #Error detection
     if(output_start_time==-1 or output_end_time==-1):
         print("No rosbag found")
         return False
-    
-    for idx,interval in enumerate(bag_intervals):
-        with rosbag.Bag(output_name+"_"+str(idx)+".bag", 'w') as outbag:
-            #Now process all rosbag in the right order and write the recorded messages into the new bag
-            for bag in interval:
-                with rosbag.Bag(file, 'r') as bag:
-                    print("test")
-                    #print(bag[1])
-    
+
     #Open rosbags with intersecting time intervals
+    for idx,interval in enumerate(bag_intervals):
+        #Output some useful parameters on the measurement series
+        duration = interval[-1][2]-interval[0][1]
+        print("Generating new bag in time interval from " + str(interval[-1][2]) + "s to " + str(interval[0][1])) + "s"
+        print("the duration will be: " + str(duration) + " seconds")
+        print("Generating: "+output_name+"_"+str(idx)+".bag")
+        with rosbag.Bag(output_name+"_"+str(idx)+".bag", 'w') as out_bag:
+            #Now process all rosbag in the right order and write the recorded messages into the new bag
+            for inputbag in interval:
+                print("processing "+inputbag[0]+"...")
+                with rosbag.Bag(inputbag[0], 'r') as in_bag:
+                    for topic, msg, t in in_bag.read_messages():
+                        out_bag.write(topic, msg, t)
+
     
     #Merge bags to new bag-file
     
