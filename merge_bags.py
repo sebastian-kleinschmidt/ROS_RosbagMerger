@@ -6,10 +6,9 @@ import glob
 def sort_bags(properties):
     return properties[1]
 
-def merge_bags(output_name, folders):
+def merge_bags(output_name, folders, split_interval_length):
     bag_properties = []
     
-    split_interval_length = 180  #Max interval length in seconds
     allowed_interval_offset = 5 #Offset in seconds which is allowed between two bags
     
     output_start_time = -1
@@ -72,24 +71,21 @@ def merge_bags(output_name, folders):
                     for topic, msg, t in in_bag.read_messages():
                         out_bag.write(topic, msg, t)
 
-    
-    #Merge bags to new bag-file
-    
-    #Save final bag-file
     return True
     
 
 #Prepare input data
 output_name = sys.argv[1]
+time_interval = sys.argv[2]
 input_folder = []
 
-for i in range (2,len(sys.argv)):
+for i in range (3,len(sys.argv)):
     input_folder.append(sys.argv[i])
     
 print("Try to merge all rosbags in the following folders...")
 print(input_folder)
 
-if(merge_bags(output_name, input_folder)):
+if(merge_bags(output_name, input_folder, time_interval)):
     print("Success: New Rosbag has successfully been generated as: "+ output_name)
 else:
     print("FAILED: New Rosbag could not be generated!")
