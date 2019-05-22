@@ -2,6 +2,7 @@ import sys
 import rosbag
 import rospy
 import glob
+import math
 
 def sort_bags(properties):
     return properties[1]
@@ -27,34 +28,40 @@ def merge_bags(output_name, folders, split_interval_length):
                     output_end_time = bag.get_end_time()
                 #Save name, start, end and duration of current bag
                 bag_properties.append((file, bag.get_start_time(), bag.get_end_time()))
-    
-    #Sort all bags by starttime
-    bag_properties.sort(key=sort_bags)
-    
-    bag_intervals = []
-    bag_intervals.append([])
-    #Identify overlapping bags
-    current_interval_start = bag_properties[0][1]
-    current_interval_end = bag_properties[0][2]
-    for idx in range(1,len(bag_properties)):
-        if bag_properties[idx][1]<(current_interval_end+allowed_interval_offset): #Check if bags have overlapping time interval
-            bag_intervals[-1].append(bag_properties[idx])
-            if bag_properties[idx][2]>current_interval_end:
-                current_interval_end = bag_properties[idx][2]
-                #Check if interval needs to be split
-                if (current_interval_end-current_interval_start)>split_interval_length:
-                    current_interval_start = current_interval_end
-                    bag_intervals.append([])
-        else:
-            bag_intervals.append([])                        #Create new interval
-    
-    #Output resulting numver of intervals
-    print(str(len(bag_intervals)) +" intervals have been found in folders.")
-    
+
     #Error detection
     if(output_start_time==-1 or output_end_time==-1):
         print("No rosbag found")
         return False
+
+    #Initialize Intervals
+    number_of_intervals = math.ceil((output_end_time-output_start_time)/float(split_interval_length))
+    bag_intervals = []
+    for i in range(int(number_of_intervals)):
+        bag_intervals.append([])
+
+
+    #Sort all bags by starttime
+    bag_properties.sort(key=sort_bags)
+
+    #Identify overlapping bags
+    for idx in range(1,len(bag_properties)):
+        start = bag_properties[idx][1]
+        end = bag_properties[idx][2]
+        interval_start = int(math.floor((start-output_start_time)/float(split_interval_length)))
+        interval_end = int(math.floor((end-output_start_time)/float(split_interval_length)))
+        if interval_start!=interval_end:
+            bag_intervals[interval_start].append(bag_properties[idx])
+            bag_intervals[interval_end].append(bag_properties[idx])
+        else:
+            bag_intervals[interval_start].append(bag_properties[idx])
+
+    #Output resulting numver of intervals
+    print(str(len(bag_intervals)) +" intervals have been found in folders:")
+    for idx, interval in enumerate(bag_intervals):
+        print("Interval "+str(idx)+":")
+        for bag in interval:
+            print(bag[0])
 
     #Open rosbags with intersecting time intervals
     for idx,interval in enumerate(bag_intervals):
@@ -69,9 +76,8 @@ def merge_bags(output_name, folders, split_interval_length):
                 print("processing "+inputbag[0]+"...")
                 with rosbag.Bag(inputbag[0], 'r') as in_bag:
                     for topic, msg, t in in_bag.read_messages():
-                        out_bag.write(topic, msg, t)
-
-    return True
+                        if t.to_sec()>=(idx*split_interval_length) and t.to_sec()<((idx+1)*split_interval_length):
+                            out_bag.write(topic, msg, t)
     
 
 #Prepare input data
