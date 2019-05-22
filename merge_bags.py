@@ -76,13 +76,16 @@ def merge_bags(output_name, folders, split_interval_length):
                 print("processing "+inputbag[0]+"...")
                 with rosbag.Bag(inputbag[0], 'r') as in_bag:
                     for topic, msg, t in in_bag.read_messages():
-                        if t.to_sec()>=(idx*split_interval_length) and t.to_sec()<((idx+1)*split_interval_length):
+                        lower_bound = float(idx*float(split_interval_length))
+                        upper_bound = float((idx+1)*float(split_interval_length))
+
+                        if (t.to_sec()-output_start_time)>=lower_bound and (t.to_sec()-output_start_time)<upper_bound:
                             out_bag.write(topic, msg, t)
     
 
 #Prepare input data
 output_name = sys.argv[1]
-time_interval = sys.argv[2]
+time_interval = float(sys.argv[2])
 input_folder = []
 
 for i in range (3,len(sys.argv)):
