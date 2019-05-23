@@ -84,14 +84,23 @@ def merge_bags(output_name, folders, split_interval_length):
                         upper_bound = float((idx+1)*float(split_interval_length))
 
                         if (t.to_sec()-output_start_time)>=lower_bound and (t.to_sec()-output_start_time)<upper_bound:
-                            if topic=="/camera_left/image" or topic=="/camera_right/image" or topic=="/thermal_image_raw" or ("/camera/image_wavelength" in topic):
+                            if topic=="/camera_left/image" or topic=="/camera_right/image" or topic=="/thermal_image_raw" or ("/camera/image_wavelength" in topic): 
+                                #Time stamp is expected to be more accurate
+                                out_time = msg.header.stamp                          
+                                #out_time = t#msg.header.stamp
+                                #print(type(msg))                                
+                                #print(type(t))                                
+                                #print(t.to_sec())
+                                #print(type(msg.header.stamp))
+                                #print(msg.header.stamp.to_sec())
+
                                 if topic=="/camera_left/image" or topic=="/camera_right/image":
                                     bridge = CvBridge()
                                     cv_image = bridge.imgmsg_to_cv2(msg.image, desired_encoding="bgr8")
                                     out_msg = bridge.cv2_to_imgmsg(cv_image, encoding="bgr8")
-                                    out_bag.write(topic, out_msg, t)
+                                    out_bag.write(topic, out_msg, out_time)
                                 else:
-                                    out_bag.write(topic, msg, t)
+                                    out_bag.write(topic, msg, out_time)
     
 
 #Prepare input data
