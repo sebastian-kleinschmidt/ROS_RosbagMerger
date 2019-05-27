@@ -98,6 +98,7 @@ def merge_bags(output_name, folders, split_interval_length):
                                     bridge = CvBridge()
                                     cv_image = bridge.imgmsg_to_cv2(msg.image, desired_encoding="bgr8")
                                     out_msg = bridge.cv2_to_imgmsg(cv_image, encoding="bgr8")
+                                    out_msg.header.stamp = msg.header.stamp
                                     out_bag.write(topic, out_msg, out_time)
                                 else:
                                     out_bag.write(topic, msg, out_time)
